@@ -127,9 +127,9 @@ function generateQuestion(difficulty = 'easy', questionMode = 'practice') {
   let a, b, op, answer, questionText;
 
   const ops = difficulty === 'easy'
-    ? ['+', '-']
+    ? ['+', '-', '×', '÷']
     : difficulty === 'medium'
-      ? ['+', '-', '×']
+      ? ['+', '-', '×', '÷']
       : operations;
 
   op = ops[randomInt(0, ops.length - 1)];
