@@ -259,7 +259,7 @@ export default function TeacherDashboard() {
                     <input
                       id="className"
                       type="text"
-                      placeholder="e.g. Grade 5B"
+                      placeholder="e.g. Grade 5"
                       value={className}
                       onChange={(e) => setClassName(e.target.value)}
                       aria-required="true"
@@ -274,10 +274,10 @@ export default function TeacherDashboard() {
                       onChange={(e) => setGradeLevel(e.target.value)}
                       aria-required="true"
                     >
-                      <option value={4}>Grade 4 (Easy)</option>
-                      <option value={5}>Grade 5 (Medium)</option>
-                      <option value={6}>Grade 6 (Hard)</option>
-                      <option value={7}>Grade 7 (Exam Practice)</option>
+                      <option value={4}>Grade 4</option>
+                      <option value={5}>Grade 5</option>
+                      <option value={6}>Grade 6</option>
+                      <option value={7}>Grade 7</option>
                       <option value={8}>Grade 8</option>
                       <option value={9}>Grade 9</option>
                     </select>
