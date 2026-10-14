@@ -261,7 +261,7 @@ export default function Landing() {
       </motion.main>
 
       <footer className="landing-footer" aria-label="Site info">
-        <p>Math Tug-of-War · Grades 4–7 · Built with ❤️ for South African classrooms</p>
+        <p>Math Tug-of-War · Grades 4–9 · Built with ❤️ for South African classrooms</p>
       </footer>
     </div>
   );
