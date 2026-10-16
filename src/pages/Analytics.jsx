@@ -16,6 +16,7 @@ import { Bar, Pie } from 'react-chartjs-2';
 import { db, IS_DEMO_MODE } from '../firebase/config';
 import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
+import { deleteSessionData } from '../utils/sessionDeletion';
 
 ChartJS.register(
   CategoryScale,
@@ -34,13 +35,16 @@ export default function Analytics() {
 
   const [firestoreSessions, setFirestoreSessions] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [participantLoad, setParticipantLoad] = useState(null);
+  const [loading, setLoading] = useState(!IS_DEMO_MODE);
+  const [deletingSessionId, setDeletingSessionId] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteNotice, setDeleteNotice] = useState('');
 
   useEffect(() => {
     if (!user) { navigate('/'); return; }
 
     if (IS_DEMO_MODE) {
-      setLoading(false);
       return;
     }
 
@@ -53,7 +57,14 @@ export default function Analytics() {
       .then((snap) => {
         const data = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setFirestoreSessions(data);
-        if (data.length > 0) setSelectedId(data[0].id);
+        setSelectedId((currentId) => {
+          if (data.some((sessionData) => sessionData.id === currentId)) return currentId;
+          const sessionWithPlayers = data.find((sessionData) =>
+            Object.keys(sessionData.players || {}).length > 0
+          );
+          const sessionWithParticipants = data.find((sessionData) => sessionData.participantCount > 0);
+          return (sessionWithPlayers || sessionWithParticipants || data[0])?.id || null;
+        });
       })
       .catch((err) => {
         console.warn('Firestore query failed, falling back to live session:', err);
@@ -62,17 +73,100 @@ export default function Analytics() {
       .finally(() => setLoading(false));
   }, [user, navigate]);
 
+  useEffect(() => {
+    if (IS_DEMO_MODE || !user?.uid || !selectedId) {
+      return;
+    }
+
+    let cancelled = false;
+    getDocs(collection(db, 'sessions', selectedId, 'participants'))
+      .then((snapshot) => {
+        if (!cancelled) {
+          setParticipantLoad({
+            sessionId: selectedId,
+            records: snapshot.docs.map((participantDoc) => ({
+              id: participantDoc.id,
+              ...participantDoc.data(),
+            })),
+            error: '',
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Could not load session participants for analytics:', error);
+        if (!cancelled) {
+          setParticipantLoad({
+            sessionId: selectedId,
+            records: [],
+            error: 'Saved participant details could not be loaded. Showing available session results instead.',
+          });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId, user?.uid]);
+
+  const participantRecords = participantLoad?.sessionId === selectedId ? participantLoad.records : [];
+  const participantsLoading = Boolean(
+    !IS_DEMO_MODE && selectedId && participantLoad?.sessionId !== selectedId
+  );
+  const participantError = participantLoad?.sessionId === selectedId ? participantLoad.error : '';
+
   // Determine which session data to show.
   // Priority: Firestore selection → live session from context → nothing
   const allSessions = firestoreSessions.length > 0
     ? firestoreSessions
     : liveSession ? [{ id: sessionId, ...liveSession }] : [];
 
-  const s = firestoreSessions.length > 0
+  const selectedFirestoreSession = firestoreSessions.length > 0
     ? (firestoreSessions.find((x) => x.id === selectedId) ?? firestoreSessions[0])
+    : null;
+  const s = selectedFirestoreSession
+    ? selectedFirestoreSession.id === sessionId && liveSession
+      ? { ...selectedFirestoreSession, ...liveSession, id: selectedFirestoreSession.id }
+      : selectedFirestoreSession
     : liveSession
     ? { id: sessionId, ...liveSession }
     : null;
+
+  async function handleDeleteSelectedSession() {
+    if (!selectedFirestoreSession || !user?.uid || deletingSessionId) return;
+    const sessionName = selectedFirestoreSession.className || 'this session';
+    const confirmed = window.confirm(
+      `Permanently delete ${sessionName} (${selectedFirestoreSession.id}) and all its saved session, participant, question, and response data? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    const deletedId = selectedFirestoreSession.id;
+    setDeletingSessionId(deletedId);
+    setDeleteError('');
+    setDeleteNotice('');
+    try {
+      await deleteSessionData(deletedId, user.uid);
+      const remainingSessions = firestoreSessions.filter((sessionData) => sessionData.id !== deletedId);
+      setFirestoreSessions(remainingSessions);
+      setSelectedId((currentId) => {
+        if (currentId !== deletedId) return currentId;
+        const sessionWithPlayers = remainingSessions.find((sessionData) =>
+          Object.keys(sessionData.players || {}).length > 0
+        );
+        const sessionWithParticipants = remainingSessions.find((sessionData) => sessionData.participantCount > 0);
+        return (sessionWithPlayers || sessionWithParticipants || remainingSessions[0])?.id || null;
+      });
+      setParticipantLoad(null);
+      setDeleteNotice(`${sessionName} was permanently deleted.`);
+    } catch (error) {
+      console.error('Could not completely delete session data:', error);
+      setDeleteError(
+        'Session deletion did not complete. Some records may already have been removed; retry to finish. ' +
+        (error instanceof Error ? error.message : 'Please check your connection and permissions.')
+      );
+    } finally {
+      setDeletingSessionId(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -94,6 +188,11 @@ export default function Analytics() {
           <span aria-hidden="true">📊</span>
           <h2>No session data yet</h2>
           <p>Play a game session first, then come back here to see analytics.</p>
+          {(deleteError || deleteNotice) && (
+            <p className={deleteError ? 'session-delete-message error' : 'session-delete-message success'} role="status">
+              {deleteError || deleteNotice}
+            </p>
+          )}
           <button className="btn-primary" onClick={() => navigate('/dashboard')}>
             Go to Dashboard
           </button>
@@ -102,10 +201,11 @@ export default function Analytics() {
     );
   }
 
-  const players = s?.players ? Object.values(s.players) : [];
+  const sessionPlayers = Object.values(s?.players || {});
+  const players = sessionPlayers.length > 0 ? sessionPlayers : participantRecords;
   const teamNames = s?.teamNames ?? ['Team A', 'Team B'];
 
-  // Chart data
+  {/* Chart data */}
   const teamScoreData = {
     labels: teamNames,
     datasets: [{
@@ -118,6 +218,7 @@ export default function Analytics() {
     }],
   };
 
+  {/* Player accuracy chart data */ }
   const playerAccuracyData = {
     labels: players.map((p) => p.name),
     datasets: [{
@@ -132,6 +233,7 @@ export default function Analytics() {
     }],
   };
 
+  {/* Team participation chart data */ }
   const teamACount = players.filter((p) => p.team === 'A').length;
   const teamBCount = players.filter((p) => p.team === 'B').length;
   const participationData = {
@@ -144,6 +246,7 @@ export default function Analytics() {
     }],
   };
 
+  {/* Player score chart data */ }
   const playerScoreData = {
     labels: players.map((p) => p.name),
     datasets: [{
@@ -184,22 +287,43 @@ export default function Analytics() {
       </header>
 
       {/* Session selector — only shown when multiple Firestore sessions exist */}
-      {!IS_DEMO_MODE && allSessions.length > 1 && (
+      {!IS_DEMO_MODE && firestoreSessions.length > 0 && (
         <div className="session-selector">
-          <label htmlFor="sessionSelect">Session:</label>
-          <select
-            id="sessionSelect"
-            value={selectedId ?? ''}
-            onChange={(e) => setSelectedId(e.target.value)}
-            aria-label="Select session"
+          <div className="session-picker">
+            <label htmlFor="sessionSelect">Session:</label>
+            {allSessions.length > 1 ? (
+              <select
+                id="sessionSelect"
+                value={selectedId ?? ''}
+                onChange={(e) => setSelectedId(e.target.value)}
+                aria-label="Select session"
+              >
+                {allSessions.map((x) => (
+                  <option key={x.id} value={x.id}>
+                    {x.className} · Grade {x.gradeLevel} · {x.id}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="selected-session-label">
+                {selectedFirestoreSession?.className || 'Session'} · {selectedFirestoreSession?.id}
+              </span>
+            )}
+          </div>
+          <button
+            type="button"
+            className="btn-danger session-delete-button"
+            onClick={handleDeleteSelectedSession}
+            disabled={!selectedFirestoreSession || Boolean(deletingSessionId)}
           >
-            {allSessions.map((x) => (
-              <option key={x.id} value={x.id}>
-                {x.className} · Grade {x.gradeLevel} · {x.id}
-              </option>
-            ))}
-          </select>
+            {deletingSessionId ? 'Deleting…' : 'Delete session'}
+          </button>
         </div>
+      )}
+      {(deleteError || deleteNotice) && (
+        <p className={deleteError ? 'session-delete-message error' : 'session-delete-message success'} role="status">
+          {deleteError || deleteNotice}
+        </p>
       )}
 
       <motion.div
@@ -231,8 +355,18 @@ export default function Analytics() {
         {/* No players yet */}
         {players.length === 0 && (
           <div className="analytics-no-players">
-            <p>No player data yet. Analytics will populate once learners answer questions.</p>
+            <p>
+              {participantsLoading
+                ? 'Loading saved participant results…'
+                : s.status === 'lobby'
+                  ? 'This session has not started yet, so no player results are available.'
+                  : 'No player results were saved for this session.'}
+            </p>
           </div>
+        )}
+
+        {participantError && (
+          <p className="analytics-data-warning" role="status">{participantError}</p>
         )}
 
         {players.length > 0 && (

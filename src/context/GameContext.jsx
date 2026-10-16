@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { ref, onValue, set, update } from 'firebase/database';
-import { rtdb, IS_DEMO_MODE } from '../firebase/config';
+import { rtdb, studentRtdb, IS_DEMO_MODE } from '../firebase/config';
+import { ensureStudentAuthentication } from '../utils/studentAuth';
 
 const GameContext = createContext(null);
 
@@ -39,12 +40,27 @@ export function GameProvider({ children }) {
       return () => window.removeEventListener('demo-session-update', handler);
     }
 
-    const sessionRef = ref(rtdb, `sessions/${sessionId}`);
-    const unsubscribe = onValue(sessionRef, (snap) => {
-      if (snap.exists()) setSession(snap.val());
+    let unsubscribe;
+    let cancelled = false;
+    async function subscribeToSession() {
+      if (player?.role === 'student') await ensureStudentAuthentication();
+      if (cancelled) return;
+      const sessionDatabase = player?.role === 'student' ? studentRtdb : rtdb;
+      const sessionRef = ref(sessionDatabase, `sessions/${sessionId}`);
+      unsubscribe = onValue(sessionRef, (snap) => {
+        if (snap.exists()) setSession(snap.val());
+      }, (error) => {
+        console.error('Could not subscribe to the live session:', error);
+      });
+    }
+    subscribeToSession().catch((error) => {
+      console.error('Could not authenticate student session:', error);
     });
-    return unsubscribe;
-  }, [sessionId]);
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [sessionId, player?.role]);
 
   const joinSession = (id, playerInfo) => {
     setSessionId(id);
@@ -86,7 +102,8 @@ export function GameProvider({ children }) {
       setSession({ ...demoSessions[sessionId] });
       return;
     }
-    return update(ref(rtdb, `sessions/${sessionId}/${path}`), data);
+    const sessionDatabase = player?.role === 'student' ? studentRtdb : rtdb;
+    return update(ref(sessionDatabase, `sessions/${sessionId}/${path}`), data);
   };
 
   const setSessionData = async (path, data) => {
@@ -104,7 +121,8 @@ export function GameProvider({ children }) {
       setSession({ ...demoSessions[sessionId] });
       return;
     }
-    return set(ref(rtdb, `sessions/${sessionId}/${path}`), data);
+    const sessionDatabase = player?.role === 'student' ? studentRtdb : rtdb;
+    return set(ref(sessionDatabase, `sessions/${sessionId}/${path}`), data);
   };
 
   // Called during session creation in demo mode

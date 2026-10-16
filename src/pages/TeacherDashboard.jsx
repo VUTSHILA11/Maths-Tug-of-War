@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useGame } from '../context/GameContext';
 import { createSession } from '../utils/sessionHelpers';
 import Leaderboard from '../components/Leaderboard';
+import QuestionHistory from '../components/QuestionHistory';
 import logo from '../assets/logo.png';
 
 export default function TeacherDashboard() {
@@ -15,7 +16,7 @@ export default function TeacherDashboard() {
   const { joinSession: joinGameCtx, session, sessionId, registerDemoSession } = useGame();
   const navigate = useNavigate();
 
-  const [view, setView] = useState('home'); // 'home' | 'create' | 'monitor'
+  const [view, setView] = useState('home'); // 'home' | 'create' | 'monitor' | 'history'
   const [pastSessions, setPastSessions] = useState([]);
 
   // Create session form
@@ -30,7 +31,7 @@ export default function TeacherDashboard() {
   const [createError, setCreateError] = useState('');
   const [newCode, setNewCode] = useState('');
 
-  // Active session monitor
+  {/* Active session monitor */}
   const [activeSession, setActiveSession] = useState(null);
 
   useEffect(() => {
@@ -41,7 +42,7 @@ export default function TeacherDashboard() {
     return unsubscribe;
   }, [sessionId]);
 
-  // Load past sessions from Firestore
+  {/* Load past sessions from Firestore */}
   useEffect(() => {
     if (!user) return;
     const q = query(
@@ -136,6 +137,14 @@ export default function TeacherDashboard() {
           )}
           <li>
             <button
+              className={`sidebar-btn ${view === 'history' ? 'active' : ''}`}
+              onClick={() => setView('history')}
+            >
+              🕘 Question History
+            </button>
+          </li>
+          <li>
+            <button
               className="sidebar-btn"
               onClick={() => navigate('/analytics')}
             >
@@ -171,6 +180,7 @@ export default function TeacherDashboard() {
                 <p>Create a classroom game with a shareable code</p>
               </div>
 
+              {/* Active session monitor */}
               {sessionId && (
                 <div className="info-card active-card" onClick={() => setView('monitor')} tabIndex={0} role="button" aria-label="View live session">
                   <span className="card-icon" aria-hidden="true">🔴</span>
@@ -184,6 +194,12 @@ export default function TeacherDashboard() {
                 <span className="card-icon" aria-hidden="true">📊</span>
                 <h3>View Analytics</h3>
                 <p>Review past session performance data</p>
+              </div>
+
+              <div className="info-card" onClick={() => setView('history')} tabIndex={0} role="button" aria-label="View question history">
+                <span className="card-icon" aria-hidden="true">🕘</span>
+                <h3>Question History</h3>
+                <p>Search questions and responses from previous sessions</p>
               </div>
             </div>
 
@@ -412,6 +428,7 @@ export default function TeacherDashboard() {
             />
           </motion.div>
         )}
+        {view === 'history' && <QuestionHistory sessionOptions={pastSessions} />}
       </main>
     </div>
   );

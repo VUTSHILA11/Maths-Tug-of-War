@@ -1,5 +1,5 @@
 import { onValue, push, ref, set } from 'firebase/database';
-import { rtdb, IS_DEMO_MODE } from '../firebase/config';
+import { studentRtdb, IS_DEMO_MODE } from '../firebase/config';
 
 function storageKey(playerId) {
     return `math-tug-of-war-mistakes-${playerId}`;
@@ -26,7 +26,7 @@ export async function saveIncorrectAnswer(playerId, mistake) {
         return;
     }
 
-    const mistakeRef = push(ref(rtdb, `playerMistakes/${playerId}`));
+    const mistakeRef = push(ref(studentRtdb, `playerMistakes/${playerId}`));
     await set(mistakeRef, record);
 }
 
@@ -37,7 +37,7 @@ export function subscribeToMistakes(playerId, onChange, onError) {
         return () => { };
     }
 
-    return onValue(ref(rtdb, `playerMistakes/${playerId}`), (snapshot) => {
+    return onValue(ref(studentRtdb, `playerMistakes/${playerId}`), (snapshot) => {
         const values = snapshot.val() || {};
         onChange(Object.values(values).sort((a, b) => (b.answeredAt || 0) - (a.answeredAt || 0)));
     }, onError);
@@ -60,7 +60,7 @@ export async function saveAnswerRecord(playerId, answer) {
         return;
     }
 
-    const answerRef = push(ref(rtdb, `playerAnswers/${playerId}`));
+    const answerRef = push(ref(studentRtdb, `playerAnswers/${playerId}`));
     await set(answerRef, record);
 }
 
@@ -71,7 +71,7 @@ export function subscribeToCorrectAnswers(playerId, onChange, onError) {
         return () => { };
     }
 
-    return onValue(ref(rtdb, `playerAnswers/${playerId}`), (snapshot) => {
+    return onValue(ref(studentRtdb, `playerAnswers/${playerId}`), (snapshot) => {
         const values = snapshot.val() || {};
         onChange(Object.values(values)
             .filter((answer) => answer.isCorrect)

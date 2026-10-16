@@ -1,0 +1,50 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "sessions": {
+      "$sessionId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && (newData.exists() || data.child('teacherId').val() === auth.uid)",
+        "players": {
+          "$playerId": {
+            ".write": "auth != null && (auth.token.firebase.sign_in_provider != 'anonymous' || auth.uid === $playerId)"
+          }
+        },
+        "scores": {
+          ".write": "auth != null"
+        },
+        "ropePosition": {
+          ".write": "auth != null"
+        },
+        "status": {
+          ".write": "auth != null"
+        },
+        "endedAt": {
+          ".write": "auth != null"
+        },
+        "earlyWinner": {
+          ".write": "auth != null"
+        },
+        "teamACount": {
+          ".write": "auth != null"
+        },
+        "teamBCount": {
+          ".write": "auth != null"
+        }
+      }
+    },
+    "playerMistakes": {
+      "$playerId": {
+        ".read": "auth != null && auth.uid === $playerId",
+        ".write": "auth != null && auth.uid === $playerId"
+      }
+    },
+    "playerAnswers": {
+      "$playerId": {
+        ".read": "auth != null && auth.uid === $playerId",
+        ".write": "auth != null && auth.uid === $playerId"
+      }
+    }
+  }
+}

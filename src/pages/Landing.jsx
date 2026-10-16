@@ -27,6 +27,7 @@ export default function Landing() {
 
   const [activeTab, setActiveTab] = useState('student'); // 'student' | 'teacher'
 
+  {/* Handle teacher login */ }
   async function handleTeacherLogin(e) {
     e.preventDefault();
     setTeacherError('');
@@ -40,7 +41,8 @@ export default function Landing() {
       setTeacherLoading(false);
     }
   }
-
+ 
+  {/* Handle student join */ }
   async function handleStudentJoin(e) {
     e.preventDefault();
     setStudentError('');

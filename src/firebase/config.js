@@ -19,14 +19,17 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const studentApp = initializeApp(firebaseConfig, 'student');
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const rtdb = getDatabase(app);
+export const studentAuth = getAuth(studentApp);
+export const studentDb = getFirestore(studentApp);
+export const studentRtdb = getDatabase(studentApp);
 
 // Demo mode is active only when no real values have been pasted in yet
 export const IS_DEMO_MODE = firebaseConfig.apiKey.startsWith('PASTE_');
 
 export default app;
-
 

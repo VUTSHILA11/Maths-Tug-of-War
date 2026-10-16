@@ -1,0 +1,138 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function teacherAccount() {
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider != 'anonymous';
+    }
+
+    function ownsSession(sessionId) {
+      return teacherAccount()
+        && exists(/databases/$(database)/documents/sessions/$(sessionId))
+        && get(/databases/$(database)/documents/sessions/$(sessionId)).data.teacherId
+          == request.auth.uid;
+    }
+
+    function ownsQuestionOccurrenceSession(occurrenceId) {
+      return occurrenceId.matches('^[A-Z0-9]{6}_[0-9]+$')
+        && ownsSession(occurrenceId.split('_')[0]);
+    }
+
+    match /sessions/{sessionId} {
+      allow create: if teacherAccount()
+        && request.resource.data.teacherId == request.auth.uid;
+      allow read: if teacherAccount()
+        && resource.data.teacherId == request.auth.uid;
+      allow update: if teacherAccount()
+        && resource.data.teacherId == request.auth.uid
+        && request.resource.data.teacherId == request.auth.uid;
+      allow delete: if teacherAccount()
+        && resource.data.teacherId == request.auth.uid;
+
+      match /participants/{studentId} {
+        allow read: if ownsSession(sessionId);
+        allow create: if teacherAccount()
+          && ownsSession(sessionId)
+          && request.resource.data.teacherId == request.auth.uid
+          && request.resource.data.sessionId == sessionId
+          && request.resource.data.studentId == studentId
+          && request.resource.data.name is string
+          && request.resource.data.team in ['A', 'B'];
+        allow update: if teacherAccount()
+          && ownsSession(sessionId)
+          && (!('teacherId' in resource.data) || resource.data.teacherId == request.auth.uid)
+          && request.resource.data.teacherId == request.auth.uid
+          && request.resource.data.sessionId == sessionId
+          && request.resource.data.studentId == studentId;
+        allow delete: if teacherAccount()
+          && ownsSession(sessionId)
+          && (!('teacherId' in resource.data) || resource.data.teacherId == request.auth.uid);
+      }
+    }
+
+    match /{path=**}/participants/{studentId} {
+      allow read: if teacherAccount() && resource.data.teacherId == request.auth.uid;
+    }
+
+    match /{path=**}/responses/{studentId} {
+      allow read: if teacherAccount() && resource.data.teacherId == request.auth.uid;
+    }
+
+    match /questionHistory/{occurrenceId} {
+      allow get: if teacherAccount()
+        && (resource.data.teacherId == request.auth.uid
+          || ownsQuestionOccurrenceSession(occurrenceId));
+      allow list: if teacherAccount() && resource.data.teacherId == request.auth.uid;
+      allow create: if teacherAccount()
+        && request.resource.data.teacherId == request.auth.uid
+        && request.resource.data.sessionId is string
+        && ownsSession(request.resource.data.sessionId)
+        && request.resource.data.questionText is string
+        && request.resource.data.questionIndex is int;
+      allow update: if false;
+      allow delete: if teacherAccount()
+        && resource.data.teacherId == request.auth.uid
+        && ownsSession(resource.data.sessionId);
+
+      match /responses/{studentId} {
+        allow read: if teacherAccount()
+          && resource.data.teacherId == request.auth.uid;
+        allow create, update: if signedIn()
+          && request.auth.token.firebase.sign_in_provider == 'anonymous'
+          && request.auth.uid == studentId
+          && request.resource.data.keys().hasOnly([
+            'playerId',
+            'playerName',
+            'team',
+            'answer',
+            'isCorrect',
+            'answeredAt',
+            'sessionId',
+            'sessionCode',
+            'studentId',
+            'teacherId',
+            'playerNameLower',
+            'questionText',
+            'topic',
+            'questionSearchTerms'
+          ])
+          && request.resource.data.playerId == studentId
+          && request.resource.data.studentId == studentId
+          && request.resource.data.sessionId is string
+          && request.resource.data.sessionCode is string
+          && request.resource.data.teacherId is string
+          && request.resource.data.playerName is string
+          && request.resource.data.playerName.size() > 0
+          && request.resource.data.playerName.size() <= 60
+          && request.resource.data.playerNameLower is string
+          && request.resource.data.team in ['A', 'B']
+          && request.resource.data.answer is string
+          && request.resource.data.answer.size() <= 200
+          && request.resource.data.questionText is string
+          && request.resource.data.topic is string
+          && request.resource.data.questionSearchTerms is list
+          && request.resource.data.isCorrect in [true, false, null]
+          && request.resource.data.answeredAt is int
+          && exists(/databases/$(database)/documents/questionHistory/$(occurrenceId))
+          && get(/databases/$(database)/documents/questionHistory/$(occurrenceId)).data.sessionId
+            == request.resource.data.sessionId
+          && get(/databases/$(database)/documents/questionHistory/$(occurrenceId)).data.teacherId
+            == request.resource.data.teacherId
+          && exists(/databases/$(database)/documents/sessions/$(request.resource.data.sessionId)/participants/$(studentId))
+          && get(/databases/$(database)/documents/sessions/$(request.resource.data.sessionId)/participants/$(studentId)).data.team
+            == request.resource.data.team;
+        allow delete: if teacherAccount()
+          && resource.data.teacherId == request.auth.uid
+          && ownsSession(resource.data.sessionId);
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

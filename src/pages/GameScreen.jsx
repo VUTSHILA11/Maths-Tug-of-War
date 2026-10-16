@@ -1,14 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ref, update, get } from 'firebase/database';
-import { rtdb, IS_DEMO_MODE } from '../firebase/config';
+import { ref, update, get, set } from 'firebase/database';
+import { rtdb, studentRtdb, IS_DEMO_MODE } from '../firebase/config';
 import { useGame } from '../context/GameContext';
+import { saveStudentParticipation } from '../utils/sessionHelpers';
 import TugOfWarRope from '../components/TugOfWarRope';
 import CountdownTimer from '../components/CountdownTimer';
 import FeedbackOverlay from '../components/FeedbackOverlay';
 import Leaderboard from '../components/Leaderboard';
 import { saveAnswerRecord, saveIncorrectAnswer } from '../utils/mistakeHistory';
+import { recordPlayerQuestionAnswer, recordQuestionOccurrence } from '../utils/questionHistory';
 
 const POINTS_CORRECT = 10;   // points gained for correct answer
 const POINTS_WRONG = 3;      // points deducted for wrong answer (minimum 0)
@@ -54,7 +56,9 @@ export default function GameScreen() {
   const [timerKey, setTimerKey] = useState(0);
 
   const inputRef = useRef(null);
+  const syncedParticipantIds = useRef(new Set());
   const isTeacher = player?.role === 'teacher';
+  const sessionDatabase = isTeacher ? rtdb : studentRtdb;
 
   const currentIndex = session?.currentQuestionIndex ?? 0;
   const currentQuestion = session?.questions?.[currentIndex];
@@ -91,6 +95,36 @@ export default function GameScreen() {
     setTimerKey((k) => k + 1);
     setTimeout(() => inputRef.current?.focus(), 100);
   }, [currentIndex]);
+
+  useEffect(() => {
+    if (!isTeacher || session?.status !== 'active' || !sessionId || !currentQuestion) return;
+    recordQuestionOccurrence(sessionId, session, currentIndex, currentQuestion)
+      .catch((error) => console.error('Could not record question history:', error));
+  }, [
+    currentIndex,
+    currentQuestion,
+    currentQuestion?.answer,
+    currentQuestion?.operation,
+    currentQuestion?.questionText,
+    currentQuestion?.topic,
+    isTeacher,
+    session,
+    sessionId,
+  ]);
+
+  useEffect(() => {
+    if (!isTeacher || IS_DEMO_MODE || session?.status !== 'active' || !sessionId) return;
+    const players = Object.keys(session.players || {});
+    const newlyJoined = players.filter((playerId) => !syncedParticipantIds.current.has(playerId));
+    newlyJoined.forEach((playerId) => syncedParticipantIds.current.add(playerId));
+    Promise.all(newlyJoined.map((playerId) =>
+      saveStudentParticipation(sessionId, session, playerId, 'active')
+        .catch((error) => {
+          syncedParticipantIds.current.delete(playerId);
+          console.error('Could not record student participation:', error);
+        })
+    ));
+  }, [isTeacher, session?.players, session?.status, sessionId, session]);
 
   // Auto-advance when ALL players have answered the current question (teacher only drives this)
   useEffect(() => {
@@ -156,7 +190,7 @@ export default function GameScreen() {
     }
 
     // ── Firebase path ─────────────────────────────────────────────────
-    const sessionSnap = await get(ref(rtdb, `sessions/${sessionId}`));
+    const sessionSnap = await get(ref(sessionDatabase, `sessions/${sessionId}`));
     if (!sessionSnap.exists()) return;
     const s = sessionSnap.val();
 
@@ -172,7 +206,7 @@ export default function GameScreen() {
 
     // Update player stats
     if (player?.playerId) {
-      const playerRef = ref(rtdb, `sessions/${sessionId}/players/${player.playerId}`);
+      const playerRef = ref(sessionDatabase, `sessions/${sessionId}/players/${player.playerId}`);
       const pSnap = await get(playerRef);
       if (pSnap.exists()) {
         const current = pSnap.val();
@@ -186,18 +220,18 @@ export default function GameScreen() {
       }
     }
 
-    const sessionUpdate = {
-      [`scores/${teamKey}`]: newTeamScore,
-      ropePosition: newRope,
-    };
+    await update(ref(sessionDatabase, `sessions/${sessionId}/scores`), {
+      [teamKey]: newTeamScore,
+    });
+    await set(ref(sessionDatabase, `sessions/${sessionId}/ropePosition`), newRope);
 
     if (winner) {
-      sessionUpdate.status = 'ended';
-      sessionUpdate.endedAt = Date.now();
-      sessionUpdate.earlyWinner = winner;
+      await Promise.all([
+        set(ref(sessionDatabase, `sessions/${sessionId}/status`), 'ended'),
+        set(ref(sessionDatabase, `sessions/${sessionId}/endedAt`), Date.now()),
+        set(ref(sessionDatabase, `sessions/${sessionId}/earlyWinner`), winner),
+      ]);
     }
-
-    await update(ref(rtdb, `sessions/${sessionId}`), sessionUpdate);
   }
 
   const handleQuestionTimeout = useCallback(async () => {
@@ -208,6 +242,24 @@ export default function GameScreen() {
       setFeedback('timeout');
       setShowFeedback(true);
       await recordMistake('No answer (time expired)');
+      try {
+        await recordPlayerQuestionAnswer({
+          sessionId,
+          playerId: player?.playerId,
+          questionIndex: currentIndex,
+          playerName: player?.name,
+          team: player?.team,
+          answer: '',
+          isCorrect: null,
+          sessionCode: session?.code,
+          teacherId: session?.teacherId,
+          playerNameLower: player?.name?.toLocaleLowerCase(),
+          questionText: currentQuestion?.questionText,
+          topic: currentQuestion?.topic || currentQuestion?.operation,
+        });
+      } catch (error) {
+        console.error('Could not save timed-out answer history:', error);
+      }
     }
     // Mark as answered (timed out) so auto-advance can still fire
     if (player?.playerId && sessionId) {
@@ -219,12 +271,12 @@ export default function GameScreen() {
         }
       } else {
         await update(
-          ref(rtdb, `sessions/${sessionId}/players/${player.playerId}`),
+          ref(sessionDatabase, `sessions/${sessionId}/players/${player.playerId}`),
           { [`answeredQ${currentIndex}`]: true }
         );
       }
     }
-  }, [hasAnswered, sessionId, isTeacher, player, currentIndex, recordMistake]);
+  }, [hasAnswered, sessionId, isTeacher, player, currentIndex, recordMistake, session?.code, sessionDatabase]);
 
   async function advanceQuestion() {
     if (!sessionId) return;
@@ -247,13 +299,13 @@ export default function GameScreen() {
     }
 
     if (nextIndex >= totalQuestions) {
-      await update(ref(rtdb, `sessions/${sessionId}`), {
+      await update(ref(sessionDatabase, `sessions/${sessionId}`), {
         status: 'ended',
         endedAt: Date.now(),
         questionActive: false,
       });
     } else {
-      await update(ref(rtdb, `sessions/${sessionId}`), {
+      await update(ref(sessionDatabase, `sessions/${sessionId}`), {
         currentQuestionIndex: nextIndex,
         questionActive: true,
         timeLeft: 20,
@@ -273,6 +325,25 @@ export default function GameScreen() {
 
     setFeedback(isCorrect ? 'correct' : 'incorrect');
     setShowFeedback(true);
+
+    try {
+      await recordPlayerQuestionAnswer({
+        sessionId,
+        playerId: player?.playerId,
+        questionIndex: currentIndex,
+        playerName: player?.name,
+        team: player?.team,
+        answer: trimmed,
+        isCorrect,
+        sessionCode: session?.code,
+        teacherId: session?.teacherId,
+        playerNameLower: player?.name?.toLocaleLowerCase(),
+        questionText: currentQuestion.questionText,
+        topic: currentQuestion.topic || currentQuestion.operation,
+      });
+    } catch (error) {
+      console.error('Could not save question response history:', error);
+    }
 
     await applyScoreUpdate(isCorrect);
     try {
@@ -301,7 +372,7 @@ export default function GameScreen() {
         }
       } else {
         await update(
-          ref(rtdb, `sessions/${sessionId}/players/${player.playerId}`),
+          ref(sessionDatabase, `sessions/${sessionId}/players/${player.playerId}`),
           { [`answeredQ${currentIndex}`]: true }
         );
       }
@@ -325,7 +396,7 @@ export default function GameScreen() {
       }
       return;
     }
-    await update(ref(rtdb, `sessions/${sessionId}`), {
+    await update(ref(sessionDatabase, `sessions/${sessionId}`), {
       status: 'ended',
       endedAt: Date.now(),
     });

@@ -22,7 +22,8 @@ export default function Results() {
   // Save results to Firestore once
   useEffect(() => {
     if (sessionId && session && isTeacher) {
-      saveSessionResults(sessionId, session);
+      saveSessionResults(sessionId, session)
+        .catch((error) => console.error('Could not save session results:', error));
     }
   }, []);
 

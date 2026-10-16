@@ -4,12 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ref, update } from 'firebase/database';
 import { rtdb, IS_DEMO_MODE } from '../firebase/config';
 import { useGame } from '../context/GameContext';
+import { markSessionStarted } from '../utils/sessionHelpers';
 import logo from '../assets/logo.png';
 
 export default function Lobby() {
   const { session, sessionId, player } = useGame();
   const navigate = useNavigate();
   const [localCountdown, setLocalCountdown] = useState(null);
+  const [startError, setStartError] = useState('');
 
   const isTeacher = player?.role === 'teacher';
 
@@ -30,6 +32,7 @@ export default function Lobby() {
 
   async function handleStartGame() {
     if (!sessionId) return;
+    setStartError('');
 
     // Write countdown into the session so every connected client sees it
     const writeCountdown = async (val) => {
@@ -63,10 +66,19 @@ export default function Lobby() {
             window.dispatchEvent(new CustomEvent('demo-session-update', { detail: { sessionId } }));
           }
         } else {
+          const startedAt = Date.now();
+          try {
+            await markSessionStarted(sessionId, startedAt);
+          } catch (error) {
+            console.error('Could not persist participation before starting the session:', error);
+            await writeCountdown(null);
+            setStartError('Could not save participation records. Please try starting the session again.');
+            return;
+          }
           await update(ref(rtdb, `sessions/${sessionId}`), {
             countdown: null,
             status: 'active',
-            startedAt: Date.now(),
+            startedAt,
             currentQuestionIndex: 0,
             questionActive: true,
           });
@@ -234,6 +246,7 @@ export default function Lobby() {
               {players.length} player{players.length !== 1 ? 's' : ''} connected.
               {players.length < 2 ? ' Waiting for at least 2 players...' : ' Ready to start!'}
             </p>
+            {startError && <p className="form-error" role="alert">{startError}</p>}
             <button
               className="btn-start-game"
               onClick={handleStartGame}

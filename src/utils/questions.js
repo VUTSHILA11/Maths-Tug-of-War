@@ -1,5 +1,5 @@
 // Question generator based on grade level
-// Grade 4 → Easy, Grade 5 → Medium, Grade 6 → Hard
+// Grade 4 → Grade 4, Grade 5 → Grade 5, Grade 6 → Grade 6, Grade 7 → Grade 7, Grade 8 → Grade 8, Grade 9 → Grade 9
 
 const operations = ['+', '-', '×', '÷'];
 
