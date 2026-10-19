@@ -15,7 +15,7 @@ function formatDate(timestamp, fallback) {
   return date ? date.toLocaleString() : 'Time unavailable';
 }
 
-export default function QuestionHistory({ initialFilters = {}, sessionOptions = [] }) {
+export default function QuestionHistory({ initialFilters = {}, sessionOptions = [], onBack }) {
   const { user } = useAuth();
   const [historyView, setHistoryView] = useState(initialFilters.view || 'questions');
   const [draft, setDraft] = useState({
@@ -40,7 +40,7 @@ export default function QuestionHistory({ initialFilters = {}, sessionOptions = 
     ...(initialFilters.studentId ? { studentId: initialFilters.studentId } : {}),
   });
   const [participationFilters, setParticipationFilters] = useState({});
-  const [openedSessionId, setOpenedSessionId] = useState('');
+  const [openedSessionId, setOpenedSessionId] = useState(initialFilters.sessionId || '');
   const [reloadCount, setReloadCount] = useState(0);
   const currentCursor = cursorStack[pageIndex];
 
@@ -162,17 +162,24 @@ export default function QuestionHistory({ initialFilters = {}, sessionOptions = 
   if (IS_DEMO_MODE) {
     return (
       <section className="dashboard-section question-history">
-        <h1>Question History</h1>
+        <div className="question-history-header">
+          <h1>Question History</h1>
+          <button type="button" className="btn-secondary" onClick={onBack}>← Back</button>
+        </div>
         <p className="history-empty">Question history is stored in Firebase and is unavailable in demo mode.</p>
       </section>
     );
   }
 
-  const openedSession = sessions[openedSessionId];
+  const openedSession = sessions[openedSessionId]
+    || sessionOptions.find((session) => session.id === openedSessionId);
 
   return (
     <section className="dashboard-section question-history">
-      <h1>Question History</h1>
+      <div className="question-history-header">
+        <h1>Question History</h1>
+        <button type="button" className="btn-secondary" onClick={onBack}>← Back</button>
+      </div>
       <p className="subtitle">Browse persisted question occurrences, student responses, and session results.</p>
 
       <div className="history-view-tabs" role="tablist" aria-label="Teacher history">

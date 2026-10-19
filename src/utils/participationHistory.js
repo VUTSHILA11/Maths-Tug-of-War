@@ -43,13 +43,18 @@ export async function getParticipationPage(teacherId, filters = {}, cursor = nul
   }
   constraints.push(orderBy('joinedAt', 'desc'));
   if (cursor) constraints.push(startAfter(cursor));
-  constraints.push(limit(PARTICIPATION_PAGE_SIZE));
+  constraints.push(limit(PARTICIPATION_PAGE_SIZE + 1));
 
   const snapshot = await getDocs(query(collectionGroup(db, 'participants'), ...constraints));
-  const records = snapshot.docs.map((participationDoc) => ({
-    id: participationDoc.id,
-    ...participationDoc.data(),
-  }));
+  const pageDocuments = snapshot.docs.slice(0, PARTICIPATION_PAGE_SIZE);
+  const records = pageDocuments.map((participationDoc) => {
+    const data = participationDoc.data();
+    return {
+      ...data,
+      id: participationDoc.id,
+      studentId: data.studentId || participationDoc.id,
+    };
+  });
   const sessionIds = [...new Set(records.map((record) => record.sessionId).filter(Boolean))];
   const sessionSnapshots = await Promise.all(
     sessionIds.map((sessionId) => getDoc(doc(db, 'sessions', sessionId)))
@@ -63,7 +68,7 @@ export async function getParticipationPage(teacherId, filters = {}, cursor = nul
   return {
     records,
     sessions,
-    lastDocument: snapshot.docs.at(-1) || null,
-    hasMore: snapshot.size === PARTICIPATION_PAGE_SIZE,
+    lastDocument: pageDocuments.at(-1) || null,
+    hasMore: snapshot.size > PARTICIPATION_PAGE_SIZE,
   };
 }

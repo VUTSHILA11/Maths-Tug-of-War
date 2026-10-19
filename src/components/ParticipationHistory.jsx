@@ -6,6 +6,7 @@ import {
   getSessionParticipantCount,
   PARTICIPATION_PAGE_SIZE,
 } from '../utils/participationHistory';
+import { downloadStudentReport } from '../utils/studentReport';
 
 function dateValue(value) {
   if (value?.toDate) return value.toDate();
@@ -44,6 +45,8 @@ export default function ParticipationHistory({
   const [loading, setLoading] = useState(!IS_DEMO_MODE);
   const [error, setError] = useState('');
   const [reloadCount, setReloadCount] = useState(0);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [exporting, setExporting] = useState(false);
   const [sessionCountResult, setSessionCountResult] = useState(null);
   const sessionCount = sessionCountResult && sessionCountResult.sessionId === filters.sessionId
     ? sessionCountResult.count
@@ -138,6 +141,14 @@ export default function ParticipationHistory({
     if (draft.minScore !== '') nextFilters.minScore = draft.minScore;
     if (draft.maxScore !== '') nextFilters.maxScore = draft.maxScore;
     setFilters(nextFilters);
+    setSelectedStudent(nextFilters.studentId
+      ? {
+        studentId: nextFilters.studentId,
+        name: nextFilters.studentId === selectedStudent?.studentId
+          ? selectedStudent.name
+          : draft.studentSearch.trim(),
+      }
+      : null);
     setCursorStack([null]);
     setPageIndex(0);
     setNextCursor(null);
@@ -158,6 +169,7 @@ export default function ParticipationHistory({
       maxScore: '',
     });
     setFilters({});
+    setSelectedStudent(null);
     setCursorStack([null]);
     setPageIndex(0);
     setNextCursor(null);
@@ -197,11 +209,26 @@ export default function ParticipationHistory({
       maxScore: '',
     });
     setFilters({ studentId: record.studentId });
+    setSelectedStudent({ studentId: record.studentId, name: record.name || '' });
     setCursorStack([null]);
     setPageIndex(0);
     setNextCursor(null);
     setLoading(true);
     setError('');
+  }
+
+  async function exportStudentReport() {
+    if (!selectedStudent || !user?.uid) return;
+    setExporting(true);
+    setError('');
+    try {
+      await downloadStudentReport(user.uid, selectedStudent);
+    } catch (exportError) {
+      console.error('Could not download student report:', exportError);
+      setError('The student report could not be downloaded. Please try again.');
+    } finally {
+      setExporting(false);
+    }
   }
 
   const activeFilterCount = Object.keys(filters).length;
@@ -217,6 +244,16 @@ export default function ParticipationHistory({
           <h2>Student Participation History</h2>
           <p>Persistent participation records, scores, and session details.</p>
         </div>
+        {selectedStudent && (
+          <button
+            className="btn-secondary"
+            type="button"
+            onClick={exportStudentReport}
+            disabled={exporting || loading}
+          >
+            {exporting ? 'Preparing PDF…' : 'Download student PDF'}
+          </button>
+        )}
         {filters.sessionId && (
           <strong className="history-count">
             {sessionCount === undefined
@@ -227,6 +264,11 @@ export default function ParticipationHistory({
           </strong>
         )}
       </div>
+      {selectedStudent && (
+        <p className="history-active-filters" role="status">
+          Showing all sessions for <strong>{selectedStudent.name || 'this learner'}</strong> ({selectedStudent.studentId}).
+        </p>
+      )}
 
       <form className="history-filters" onSubmit={applyFilters}>
         <label>
@@ -313,7 +355,11 @@ export default function ParticipationHistory({
       {loading ? (
         <div className="history-empty" role="status">Loading participation records…</div>
       ) : !error && records.length === 0 ? (
-        <div className="history-empty">No participation records match these filters. New records are added when students join a session.</div>
+        <div className="history-empty">
+          {selectedStudent
+            ? `No participation records were found for ${selectedStudent.name || 'this learner'} (${selectedStudent.studentId}) across this teacher's sessions.`
+            : 'No participation records match these filters. New records are added when students join a session.'}
+        </div>
       ) : !error && (
         <div className="sessions-table-wrap">
           <table className="sessions-table participation-table">

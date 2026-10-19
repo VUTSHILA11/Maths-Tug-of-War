@@ -1,132 +1,151 @@
-# 🪢 Math Tug-of-War
- 
-Immersive Interactive Competitive Mathematics Learning Platform for South African classrooms (Grades 4–9).
- 
-## Getting Started
- 
-### 1. Firebase Setup
+# Math Tug-of-War
 
-1. Use the existing Firebase project **`math-tug-of-war-1c242`**. Do not create or select a different project if you need its existing session and question history.
-2. Enable **Authentication → Email/Password** for teachers and **Anonymous** for students.
-3. Ensure **Cloud Firestore** is enabled for analytics and historical session data.
-4. Ensure **Realtime Database** is enabled for live game synchronisation.
-5. Register a **Web App** under Project Settings → General if this project does not already have one.
+Math Tug-of-War is a real-time, team-based mathematics game for South African classrooms, designed for Grades 4–9. Teachers create sessions and monitor progress while students join with a session code, compete in teams, and review their answers.
 
-### 2. Configure Firebase
+## Features
 
-The bundled configuration in `src/firebase/config.js` points to **`math-tug-of-war-1c242`**. To use it locally, you do not need a `.env` file.
+### For teachers
 
-If you want to use environment variables, copy `.env.example` to `.env` and leave the values blank to keep using the bundled configuration:
+- Create classroom game sessions with a grade level, team names, question count, time limit, and Practice, Test, or Exam mode.
+- Share a session code and monitor students as they join and play.
+- Follow live team scores, question progress, and the tug-of-war rope.
+- Review session analytics, participant results, scores, and answer accuracy.
+- Browse persistent question and student participation history. Search and filter history, inspect session details, and open a student's question and response records.
+- Download a selected student's participation, session, question, response, and performance data as a paginated PDF report.
+- Open a session directly from the Recent Sessions list to view that session's question history.
+- Delete a session and its saved history from Analytics. Deletion is permanent and requires confirmation.
 
-```bash
-cp .env.example .env
-```
+### For students
 
-Only fill in the variables when overriding configuration, and use values from the Web App registered in **`math-tug-of-war-1c242`**. Pointing them at another Firebase project will show that project's data instead of the existing history.
- 
-### 3. Install & Run
- 
+- Join a teacher's session with a name, six-character session code, and team choice.
+- Play timed mathematics rounds with live feedback and team scoring.
+- View the results screen and review saved incorrect and correct answers.
+
+## Requirements
+
+- Node.js and npm
+- A Firebase project for persistent teacher/student accounts, live sessions, and history
+
+## Getting started
+
 ```bash
 npm install
 npm run dev
 ```
- 
----
- 
-## How It Works
- 
-| Role    | Screen                      | What they do                                                                                                                          |
-| ------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Teacher | `/` → Login                 | Authenticate with Firebase Authentication.                                                                                            |
-| Teacher | `/dashboard`                | Create a game session and receive a six-character session code.                                                                       |
-| Teacher | `/lobby`                    | Wait for students to join and start the game.                                                                                         |
-| Teacher | `/game`                     | Monitor gameplay, reveal answers, and advance questions.                                                                              |
-| Student | `/` → Join                  | Enter their name, session code, and select a team.                                                                                    |
-| Student | `/lobby`                    | Wait for the game to begin in their team lobby.                                                                                       |
-| Student | `/game`                     | Answer mathematics questions and see the rope move in real time.                                                                      |
-| Both    | `/results`                  | View the winner announcement and player statistics.                                                                                   |
-| Teacher | `/analytics`                | Review performance charts, accuracy, and learners who may need additional support.                                                    |
-| Teacher | `/dashboard` → Question History | Search and filter historical questions, session details, student responses, and student participation.                         |
-| Student | `/analytics` or `/mistakes` | Review performance and identify incorrect answers and mathematics topics that need more practice, where supported by the application. |
- 
----
- 
-## Question Modes and Learning Support
- 
-* **Grade Range:** Mathematics learning activities are intended for learners in Grades 4–9.
-* **Question Modes:** Learners can select from Practice, Test, and Exam-style question modes, where implemented in the application.
-* **Interactive Gameplay:** Teams compete by answering mathematics questions, with scores and rope movement updated in real time.
-* **Mistake History:** Incorrect answers can be recorded for individual learners to support review and revision.
-* **Performance Analytics:** Analytics help learners and teachers identify incorrect answers, review performance, and recognise areas where additional practice may be needed.
- 
-The aim is to combine competitive, team-based gameplay with meaningful feedback so that learners can improve their mathematics skills while remaining engaged.
 
-## Persistent Session and Question History
+Vite prints the local development URL in the terminal.
 
-Live sessions continue to use Firebase Realtime Database. Session metadata and final results are stored in the existing Firestore `sessions/{sessionCode}` documents. Starting a game updates its status and start time, and finishing a game adds its end time and results without replacing the existing session record.
+## Firebase configuration
 
-When a teacher presents a question, the app creates a Firestore document in `questionHistory/{sessionCode}_{questionIndex}`. The deterministic document ID makes repeated processing of the same occurrence idempotent, while the stored question text and topic preserve what was presented at that time. Student answers and timeout events are written to a Firestore `responses/{studentUid}` subcollection using a separate anonymous Firebase identity, so other students cannot read them. A repeated question in another session or at another position has a separate history record.
+The default client configuration in `src/firebase/config.js` points to the existing Firebase project `math-tug-of-war-1c242`. No environment file is required to use that configuration.
 
-The teacher dashboard's **Question History** section reads records from Firestore and pages through them in batches of 25. Question, session, date, subject, student, team, status, and score filters are applied in Firestore before pagination. Team and student filters return the matching answer, team, timestamp, and correctness result where recorded. Unfiltered question history loads each question's response records using a teacher-ID constraint, consistent with the Firestore rules. Teachers can open a session's details, review its participants, and move from an individual student to their question and response history across sessions.
+To override it locally, create a `.env.local` file in the project root with the Firebase Web App values:
 
-Each participant is stored once under `sessions/{sessionCode}/participants/{studentUid}`. Participation is first synced by the teacher when a game starts, refreshed when a student joins late, and marked completed when results are saved. Session and participant records retain join/start/end times, team, status, score, and answer totals where available. The anonymous Firebase UID is the stable student identifier available in this project; it is not a school-issued student number, and it can change if the student's browser storage is cleared or the student uses another device. The project has no separate school student-number/account model. The current game does not expose a reliable leave-early event, so participation status is recorded as `active` or `completed`, not as a guessed early departure.
+```dotenv
+VITE_FIREBASE_API_KEY=
+VITE_FIREBASE_AUTH_DOMAIN=
+VITE_FIREBASE_DATABASE_URL=
+VITE_FIREBASE_PROJECT_ID=
+VITE_FIREBASE_STORAGE_BUCKET=
+VITE_FIREBASE_MESSAGING_SENDER_ID=
+VITE_FIREBASE_APP_ID=
+```
 
-The Analytics session picker includes a **Delete session** action. After confirmation, it permanently removes that session's Realtime Database record and its Firestore session, participant, question-occurrence, and response documents. Deletion is restricted to the session's teacher; Firestore deletes child records before the parent session record. If a network or permission error interrupts deletion, retry the action to finish removing remaining records.
+Use values from the Firebase Web App configuration. These are client-side settings, not server credentials; never put Firebase service-account keys or other secrets in a `VITE_` variable. Do not point to a different Firebase project if you need the existing session and question history.
 
-Session documents created before this feature do not have per-question presentation timestamps or occurrence records; the app does not invent those values or rewrite old question history. Existing participant documents can be enriched when the teacher next syncs that session. Student and question searches use exact full-name matches and token matching respectively; keyword matching is not full-text ranking.
+Enable the following Firebase services:
 
-No destructive migration or database reset is required. New collections and fields are additive; stored historical data is retained unless a teacher explicitly deletes a session. The configured Firestore indexes and owner-scoped Firestore rules are deployed to **`math-tug-of-war-1c242`**. To deploy future Firestore and Realtime Database rule changes, target that project explicitly with `npx firebase-tools deploy --only firestore:indexes,firestore:rules,database --project math-tug-of-war-1c242`. The indexes cover the dashboard session list and common history-filter combinations, including collection-group participation reads. Firestore may request an additional composite index for a less common combination; follow the link in the Firebase error and add the generated index before retrying. Anonymous Authentication must be enabled for student accounts and responses. Firestore rules limit session/history access to the owning teacher and response writes to the authenticated student who joined the session. Realtime Database rules require authentication, allow anonymous clients to update their own player record, and preserve live score/gameplay updates. Do not deploy Realtime Database rules to a project that relies on additional, unrepresented database paths without first merging those rules.
+1. **Authentication:** Email/Password for teachers and Anonymous authentication for students.
+2. **Cloud Firestore:** persistent session metadata, participation records, question history, and student responses.
+3. **Realtime Database:** live session state and gameplay synchronization.
 
----
- 
-## Project Structure
- 
+The checked-in Firestore rules, indexes, and Realtime Database rules are configured for the existing project. Deploy them explicitly when those files change:
+
+```bash
+npx firebase-tools deploy --only firestore:indexes,firestore:rules,database --project math-tug-of-war-1c242
+```
+
+Review the rules before deploying to another project, or to a project that contains additional Realtime Database paths. Firestore may require a composite index for a less common filter combination; follow the index link in the Firebase error and add that index to `firestore.indexes.json`.
+
+## Application screens
+
+| Route | Access | Purpose |
+| --- | --- | --- |
+| `/` | Teacher and student | Teacher login or student session join |
+| `/dashboard` | Teacher | Home, session creation, live monitor, recent sessions, and question/participation history |
+| `/lobby` | Session participants | Wait for the game to start and view teams |
+| `/game` | Session participants | Play the live mathematics game |
+| `/results` | Session participants | View final team scores and answer-review links |
+| `/analytics` | Teacher | Review session and participant performance; delete a session |
+| `/mistakes` | Student | Review saved incorrect answers |
+| `/correct-answers` | Student | Review saved correct answers |
+
+The teacher's Question History and Student Participation views are sections of the dashboard, not separate routes. Some data-driven screens require Firebase to be configured; demo mode stores live game data in memory and does not provide persistent history.
+
+## Data and history
+
+- Realtime Database synchronizes live gameplay. Firestore stores session metadata, participation records, question occurrences, and responses.
+- Question occurrences are recorded as questions are presented. Responses are stored separately and associated with the student identity that submitted them.
+- Participation records include the available student ID, session, team, join time, status, score, and answer totals. In this project, the student ID is an anonymous Firebase UID, not a school-issued number. It may differ if browser storage is cleared or the student changes devices.
+- Historical records created before question-occurrence tracking was introduced may not contain question text or presentation timestamps. The application does not invent missing history.
+- The student PDF includes available participation and session information, performance totals, and that student's recorded questions and responses. Missing or unavailable values are identified rather than fabricated.
+- No database migration or reset is required for the history features. New records and fields are additive unless a teacher explicitly deletes a session.
+
+## NPM scripts
+
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Build the production app into `dist/` |
+| `npm run preview` | Preview the production build locally |
+| `npm run lint` | Run ESLint |
+| `npm run deploy` | Build and publish `dist/` to the configured GitHub Pages branch |
+
+`npm run deploy` publishes the web app to GitHub Pages; it does not deploy Firebase rules or data. Firebase Hosting is also configured in `firebase.json` to serve `dist/` with SPA route rewrites, but deploying to Firebase Hosting is a separate operation.
+
+## Project structure
+
 ```text
 src/
-├── firebase/
-│   └── config.js           ← Firebase initialization
+├── App.jsx
 ├── context/
-│   ├── AuthContext.jsx     ← Teacher authentication
-│   └── GameContext.jsx     ← Live session state (RTDB)
-├── utils/
-│   ├── questions.js        ← Mathematics question generation
-│   │                         for Grades 4–9, subject to implementation
-│   ├── mistakeHistory.js   ← Player-specific incorrect-answer history
-│   ├── questionHistory.js  ← Persisted question occurrences and responses
-│   └── sessionHelpers.js   ← Create/join session helpers
+│   ├── AuthContext.jsx
+│   └── GameContext.jsx
 ├── components/
-│   ├── ProtectedRoute.jsx  ← Authentication guard
-│   ├── QuestionHistory.jsx ← Teacher question history and filters
-│   ├── TugOfWarRope.jsx    ← Animated rope component
-│   ├── CountdownTimer.jsx  ← Circular SVG timer
-│   ├── FeedbackOverlay.jsx ← Correct/incorrect answer animations
-│   └── Leaderboard.jsx     ← Live scores, compact and full views
-└── pages/
-    ├── Landing.jsx         ← Student join and teacher login
-    ├── TeacherDashboard.jsx
-    ├── Lobby.jsx
-    ├── GameScreen.jsx     ← Core game
-    ├── Results.jsx        ← End screen
-    ├── Analytics.jsx      ← Chart.js performance analytics
-    └── Mistakes.jsx       ← Learner incorrect-question review
+│   ├── CountdownTimer.jsx
+│   ├── FeedbackOverlay.jsx
+│   ├── Leaderboard.jsx
+│   ├── ParticipationHistory.jsx
+│   ├── ProtectedRoute.jsx
+│   ├── QuestionHistory.jsx
+│   └── TugOfWarRope.jsx
+├── firebase/
+│   └── config.js
+├── pages/
+│   ├── Analytics.jsx
+│   ├── CorrectAnswers.jsx
+│   ├── GameScreen.jsx
+│   ├── Landing.jsx
+│   ├── Lobby.jsx
+│   ├── Mistakes.jsx
+│   ├── Results.jsx
+│   └── TeacherDashboard.jsx
+└── utils/
+    ├── mistakeHistory.js
+    ├── participationHistory.js
+    ├── questionHistory.js
+    ├── questions.js
+    ├── sessionDeletion.js
+    ├── sessionHelpers.js
+    ├── studentAuth.js
+    └── studentReport.js
 ```
- 
----
- 
-## Tech Stack
- 
-* **React (Vite)** — Frontend application and development environment.
-* **Firebase Authentication** — Teacher authentication.
-* **Cloud Firestore** — Analytics and session metadata.
-* **Firebase Realtime Database** — Live game synchronisation.
-* **Framer Motion** — Animations and interactive visual effects.
-* **Chart.js / react-chartjs-2** — Analytics charts and performance visualisation.
-* **React Router v6** — Application navigation.
- 
----
- 
-## Project Goal
- 
-Math Tug-of-War aims to make mathematics learning more engaging through interactive, team-based competition. It combines real-time gameplay with performance feedback to help teachers monitor learner progress and help learners identify areas for improvement.
- 
-The platform is intended to support mathematics learning in South African classrooms across Grades 4–9 while encouraging participation, collaboration, and continuous improvement.
+
+## Technology
+
+- React 19 and Vite
+- React Router for client-side navigation
+- Firebase Authentication, Cloud Firestore, and Realtime Database
+- Framer Motion for interface animations
+- Chart.js and `react-chartjs-2` for analytics
+- jsPDF for student report downloads

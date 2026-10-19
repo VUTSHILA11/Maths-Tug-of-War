@@ -531,6 +531,19 @@ body,
   border-bottom: none;
 }
 
+.session-history-row {
+  cursor: pointer;
+}
+
+.session-history-row:hover {
+  background: #f8fafc;
+}
+
+.session-history-row:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
 .status-badge {
   padding: 0.2em 0.6em;
   border-radius: 20px;
@@ -555,6 +568,17 @@ body,
 
 .question-history .subtitle {
   margin-bottom: 1.25rem;
+}
+
+.question-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.question-history-header h1 {
+  margin: 0;
 }
 
 .history-filters {

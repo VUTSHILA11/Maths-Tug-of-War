@@ -18,6 +18,7 @@ export default function TeacherDashboard() {
 
   const [view, setView] = useState('home'); // 'home' | 'create' | 'monitor' | 'history'
   const [pastSessions, setPastSessions] = useState([]);
+  const [historySessionId, setHistorySessionId] = useState('');
 
   // Create session form
   const [className, setClassName] = useState('');
@@ -91,6 +92,16 @@ export default function TeacherDashboard() {
     navigate('/game');
   }
 
+  function openSessionHistory(sessionId) {
+    setHistorySessionId(sessionId);
+    setView('history');
+  }
+
+  function openQuestionHistory() {
+    setHistorySessionId('');
+    setView('history');
+  }
+
   async function handleLogout() {
     await logout();
     navigate('/');
@@ -138,7 +149,7 @@ export default function TeacherDashboard() {
           <li>
             <button
               className={`sidebar-btn ${view === 'history' ? 'active' : ''}`}
-              onClick={() => setView('history')}
+              onClick={openQuestionHistory}
             >
               🕘 Question History
             </button>
@@ -196,7 +207,7 @@ export default function TeacherDashboard() {
                 <p>Review past session performance data</p>
               </div>
 
-              <div className="info-card" onClick={() => setView('history')} tabIndex={0} role="button" aria-label="View question history">
+              <div className="info-card" onClick={openQuestionHistory} tabIndex={0} role="button" aria-label="View question history">
                 <span className="card-icon" aria-hidden="true">🕘</span>
                 <h3>Question History</h3>
                 <p>Search questions and responses from previous sessions</p>
@@ -218,7 +229,20 @@ export default function TeacherDashboard() {
                   </thead>
                   <tbody>
                     {pastSessions.slice(0, 10).map((s) => (
-                      <tr key={s.id}>
+                      <tr
+                        key={s.id}
+                        className="session-history-row"
+                        onClick={() => openSessionHistory(s.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            openSessionHistory(s.id);
+                          }
+                        }}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`View question history for ${s.className || 'class'}, session ${s.code || s.id}`}
+                      >
                         <td><code>{s.code}</code></td>
                         <td>{s.className}</td>
                         <td>Grade {s.gradeLevel}</td>
@@ -428,7 +452,14 @@ export default function TeacherDashboard() {
             />
           </motion.div>
         )}
-        {view === 'history' && <QuestionHistory sessionOptions={pastSessions} />}
+        {view === 'history' && (
+          <QuestionHistory
+            key={historySessionId || 'all-history'}
+            initialFilters={historySessionId ? { sessionId: historySessionId } : {}}
+            sessionOptions={pastSessions}
+            onBack={() => setView('home')}
+          />
+        )}
       </main>
     </div>
   );
