@@ -1,8 +1,13 @@
+// =============================================
+// CORRECT ANSWERS PAGE
+// Shows a learner's saved correct answers and provides review navigation.
+// =============================================
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import { subscribeToCorrectAnswers } from '../utils/mistakeHistory';
+import { formatQuestionTopic } from '../utils/questionTopics';
 
 function formatDate(timestamp) {
     return timestamp ? new Date(timestamp).toLocaleString() : 'Date unavailable';
@@ -67,7 +72,7 @@ export default function CorrectAnswers() {
                                     <div className="mistake-details">
                                         <p><span>Your answer</span><strong className="correct-answer">{answer.playerAnswer}</strong></p>
                                         <p><span>Correct answer</span><strong>{answer.correctAnswer}</strong></p>
-                                        <p><span>Topic</span><strong>{answer.topic || 'Mathematics'}</strong></p>
+                                        <p><span>Topic</span><strong>{formatQuestionTopic(answer.topic, answer.operation)}</strong></p>
                                         <p><span>Difficulty</span><strong>{answer.gradeLevel ? `Grade ${answer.gradeLevel}` : answer.difficulty || '—'}</strong></p>
                                     </div>
                                 </article>

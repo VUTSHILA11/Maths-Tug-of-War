@@ -1,3 +1,7 @@
+// =============================================
+// STUDENT REPORT EXPORT
+// Builds and downloads a student's participation and question-history report.
+// =============================================
 import { getParticipationPage } from './participationHistory';
 import { getQuestionHistoryPage } from './questionHistory';
 

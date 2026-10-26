@@ -1,3 +1,7 @@
+// =============================================
+// LANDING PAGE
+// Provides teacher sign-in and student session-joining forms.
+// =============================================
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';

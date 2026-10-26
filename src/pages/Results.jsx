@@ -1,3 +1,7 @@
+// =============================================
+// GAME RESULTS PAGE
+// Summarizes the completed match, scores, player stats, and next actions.
+// =============================================
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';

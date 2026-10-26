@@ -1,3 +1,7 @@
+// =============================================
+// AUTHENTICATION CONTEXT
+// Shares teacher sign-in state and login/logout actions across the app.
+// =============================================
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
   signInWithEmailAndPassword,

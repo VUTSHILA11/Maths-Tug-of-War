@@ -1,3 +1,7 @@
+// =============================================
+// PROTECTED ROUTE
+// Redirects visitors without an authenticated user away from protected pages.
+// =============================================
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { IS_DEMO_MODE } from '../firebase/config';

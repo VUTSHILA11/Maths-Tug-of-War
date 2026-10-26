@@ -1,3 +1,7 @@
+// =============================================
+// SESSION DATA DELETION
+// Removes a teacher-owned session and its associated database history.
+// =============================================
 import {
   collection,
   deleteDoc,

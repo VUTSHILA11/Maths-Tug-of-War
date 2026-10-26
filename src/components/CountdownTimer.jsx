@@ -1,3 +1,7 @@
+// =============================================
+// COUNTDOWN TIMER
+// Displays an animated countdown and calls onExpire when time runs out.
+// =============================================
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 

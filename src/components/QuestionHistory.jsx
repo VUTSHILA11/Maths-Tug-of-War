@@ -1,3 +1,7 @@
+// =============================================
+// QUESTION HISTORY
+// Lets teachers search question records and inspect related participation.
+// =============================================
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { IS_DEMO_MODE } from '../firebase/config';

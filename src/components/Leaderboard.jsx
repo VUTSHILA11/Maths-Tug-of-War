@@ -1,3 +1,7 @@
+// =============================================
+// GAME LEADERBOARD
+// Renders player rankings, team groupings, scores, and accuracy.
+// =============================================
 import { motion } from 'framer-motion';
 
 export default function Leaderboard({ players = {}, teamNames = ['Team A', 'Team B'], compact = false }) {

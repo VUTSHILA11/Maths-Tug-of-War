@@ -1,3 +1,7 @@
+// =============================================
+// GAME SESSION CONTEXT
+// Shares the active player and session, syncing live or demo game data.
+// =============================================
 import { createContext, useContext, useEffect, useState } from 'react';
 import { ref, onValue, set, update } from 'firebase/database';
 import { rtdb, studentRtdb, IS_DEMO_MODE } from '../firebase/config';

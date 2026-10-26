@@ -1,3 +1,7 @@
+// =============================================
+// PARTICIPATION HISTORY
+// Lets teachers filter and page through student participation and export reports.
+// =============================================
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { IS_DEMO_MODE } from '../firebase/config';

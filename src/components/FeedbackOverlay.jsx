@@ -1,3 +1,7 @@
+// =============================================
+// ANSWER FEEDBACK OVERLAY
+// Shows an animated message for answers, timeouts, and teamwork.
+// =============================================
 import { motion, AnimatePresence } from 'framer-motion';
 
 const messages = {

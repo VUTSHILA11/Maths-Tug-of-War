@@ -1,7 +1,7 @@
 // =============================================
-// FIREBASE CONFIG
-// Paste your values from:
-// Firebase Console → Project Settings → General → Your apps
+// FIREBASE CONFIGURATION
+// Initializes Firebase authentication, Firestore, and Realtime Database services.
+// Configure connection values with the VITE_FIREBASE_* environment variables.
 // =============================================
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
@@ -32,4 +32,3 @@ export const studentRtdb = getDatabase(studentApp);
 export const IS_DEMO_MODE = firebaseConfig.apiKey.startsWith('PASTE_');
 
 export default app;
-

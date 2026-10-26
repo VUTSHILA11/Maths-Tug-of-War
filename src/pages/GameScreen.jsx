@@ -1,3 +1,7 @@
+// =============================================
+// GAME SCREEN
+// Runs the live team quiz, records answers, updates scores, and moves the rope.
+// =============================================
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -75,6 +79,7 @@ export default function GameScreen() {
         difficulty: session?.difficulty,
         gradeLevel: session?.gradeLevel,
         topic: currentQuestion.topic || currentQuestion.operation,
+        operation: currentQuestion.operation,
       });
     } catch (error) {
       console.error('Could not save incorrect answer:', error);
@@ -355,6 +360,7 @@ export default function GameScreen() {
         difficulty: session.difficulty,
         gradeLevel: session.gradeLevel,
         topic: currentQuestion.topic || currentQuestion.operation,
+        operation: currentQuestion.operation,
         isCorrect,
       });
     } catch (error) {

@@ -1,3 +1,7 @@
+// =============================================
+// TEACHER DASHBOARD PAGE
+// Lets teachers create, monitor, and review classroom game sessions.
+// =============================================
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';

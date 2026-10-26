@@ -1,8 +1,13 @@
+// =============================================
+// LEARNER MISTAKES PAGE
+// Shows a learner's saved incorrect answers and provides review navigation.
+// =============================================
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useGame } from '../context/GameContext';
 import { subscribeToMistakes } from '../utils/mistakeHistory';
+import { formatQuestionTopic } from '../utils/questionTopics';
 
 function formatDate(timestamp) {
     if (!timestamp) return 'Date unavailable';
@@ -88,7 +93,7 @@ export default function Mistakes() {
                                     <div className="mistake-details">
                                         <p><span>Your answer</span><strong className="wrong-answer">{mistake.playerAnswer}</strong></p>
                                         <p><span>Correct answer</span><strong className="correct-answer">{mistake.correctAnswer}</strong></p>
-                                        <p><span>Topic</span><strong>{mistake.topic || 'Mathematics'}</strong></p>
+                                        <p><span>Topic</span><strong>{formatQuestionTopic(mistake.topic, mistake.operation)}</strong></p>
                                         <p><span>Difficulty</span><strong>{mistake.gradeLevel ? `Grade ${mistake.gradeLevel}` : mistake.difficulty || '—'}</strong></p>
                                     </div>
                                 </article>

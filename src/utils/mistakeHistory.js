@@ -1,3 +1,7 @@
+// =============================================
+// LEARNER ANSWER HISTORY
+// Saves and subscribes to students' incorrect and correct answer records.
+// =============================================
 import { onValue, push, ref, set } from 'firebase/database';
 import { studentRtdb, IS_DEMO_MODE } from '../firebase/config';
 

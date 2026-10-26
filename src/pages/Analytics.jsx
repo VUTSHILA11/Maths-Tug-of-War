@@ -1,3 +1,7 @@
+// =============================================
+// TEACHER ANALYTICS PAGE
+// Displays session performance charts and supports reviewing or deleting sessions.
+// =============================================
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';

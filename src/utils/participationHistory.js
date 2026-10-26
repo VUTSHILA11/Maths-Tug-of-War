@@ -1,3 +1,7 @@
+// =============================================
+// PARTICIPATION HISTORY DATA
+// Queries paginated student participation records and session participant counts.
+// =============================================
 import {
   collection,
   collectionGroup,

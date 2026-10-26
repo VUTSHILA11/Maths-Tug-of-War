@@ -1,3 +1,7 @@
+// =============================================
+// QUESTION HISTORY DATA
+// Records question activity and answers, and queries paginated teacher history.
+// =============================================
 import {
   collection,
   collectionGroup,

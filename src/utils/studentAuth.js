@@ -1,3 +1,7 @@
+// =============================================
+// STUDENT AUTHENTICATION
+// Ensures learners have an anonymous Firebase account for student database access.
+// =============================================
 import { signInAnonymously } from 'firebase/auth';
 import { IS_DEMO_MODE, studentAuth } from '../firebase/config';
 

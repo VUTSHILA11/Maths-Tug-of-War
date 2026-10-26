@@ -1,3 +1,7 @@
+// =============================================
+// GAME LOBBY PAGE
+// Shows teams before play and lets the teacher start the session countdown.
+// =============================================
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';

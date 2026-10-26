@@ -1,3 +1,7 @@
+// =============================================
+// SESSION HELPERS
+// Creates and joins games, and persists session, participation, and result data.
+// =============================================
 import { ref, set, get, update, runTransaction as runRtdbTransaction } from 'firebase/database';
 import {
   doc,

@@ -1,3 +1,7 @@
+// =============================================
+// TUG-OF-WAR ROPE
+// Visualizes team scores, rope position, and the match win zones.
+// =============================================
 import { motion } from 'framer-motion';
 
 /**
